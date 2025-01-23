@@ -3,6 +3,8 @@ import {
     getDatabase,
     ref,
     push,
+    onValue,
+    remove,
 } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js"
 
 const firebaseConfig = {
@@ -11,29 +13,22 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 const database = getDatabase(app)
-
-console.log(database)
+const referenceInDB = ref(database, "leads")
 
 let myLeads = []
 const inputEl = document.getElementById("input-el")
 const inputBtn = document.getElementById("input-btn")
 const ulEl = document.getElementById("ul-el")
 const deleteBtn = document.getElementById("delete-btn")
-const leadsFromLocalStorage = JSON.parse( localStorage.getItem("myLeads") )
-const tabBtn = document.getElementById("tab-btn")
 
-if (leadsFromLocalStorage) {
-    myLeads = leadsFromLocalStorage
-    render(myLeads)
-}
-
-tabBtn.addEventListener("click", function(){    
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
-        myLeads.push(tabs[0].url)
-        localStorage.setItem("myLeads", JSON.stringify(myLeads) )
-        render(myLeads)
-    })
+onValue(referenceInDB, function(snapshot) {
+    if(snapshot.exists()) {
+        const snapshotValues = snapshot.val()
+        const leads = Object.values(snapshotValues)
+        render(leads)
+    }
 })
+
 
 function render(leads) {
     let listItems = ""
@@ -50,14 +45,11 @@ function render(leads) {
 }
 
 deleteBtn.addEventListener("dblclick", function() {
-    localStorage.clear()
-    myLeads = []
-    render(myLeads)
+    remove(referenceInDB)
+    ulEl.innerHTML = ""
 })
 
 inputBtn.addEventListener("click", function() {
-    myLeads.push(inputEl.value)
-    inputEl.value = ""
-    localStorage.setItem("myLeads", JSON.stringify(myLeads) )
-    render(myLeads)
+    push(referenceInDB, inputEl.value)
+    inputEl.value = "" 
 })
